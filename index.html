@@ -6,9 +6,9 @@
     <title>Test Results Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 40px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 2.5rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; }
         
         .controls { display: flex; justify-content: center; margin-bottom: 30px; }
         #searchBar { 
@@ -18,7 +18,25 @@
         }
         #searchBar:focus { border-color: #3498db; }
 
-        .chart-container { position: relative; height: 450px; width: 100%; }
+        .chart-container { position: relative; height: 400px; width: 100%; margin-bottom: 40px; }
+
+        /* List Styles */
+        .results-list { list-style: none; padding: 0; margin-top: 20px; border-top: 1px solid #eee; }
+        .list-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; border-bottom: 1px solid #eee; transition: background 0.2s;
+        }
+        .list-item:hover { background-color: #f9f9f9; }
+        .test-info { flex-grow: 1; }
+        .test-name { font-weight: bold; font-size: 1.1em; margin: 0; }
+        .test-meta { font-size: 0.85em; color: #666; }
+        .badge { 
+            padding: 5px 12px; border-radius: 15px; font-size: 0.8em; 
+            font-weight: bold; text-transform: uppercase; color: white;
+        }
+        .pass { background-color: #2ecc71; }
+        .fail { background-color: #e74c3c; }
+        .score-text { font-weight: bold; margin-left: 20px; min-width: 80px; text-align: right; }
     </style>
 </head>
 <body>
@@ -27,11 +45,17 @@
     <h2>Academic Performance Dashboard</h2>
     
     <div class="controls">
-        <input type="text" id="searchBar" placeholder="Search by test name (e.g. Physics)..." onkeyup="updateChart()">
+        <input type="text" id="searchBar" placeholder="Search by test name..." onkeyup="updateView()">
     </div>
 
     <div class="chart-container">
         <canvas id="resultsChart"></canvas>
+    </div>
+
+    <div id="listView">
+        <h3>Test Records</h3>
+        <ul id="resultsList" class="results-list">
+            </ul>
     </div>
 </div>
 
@@ -46,27 +70,19 @@
 
     function renderChart(filteredData) {
         const ctx = document.getElementById('resultsChart').getContext('2d');
-        
-        // Destroy old chart instance if it exists to prevent overlap
         if (myChart) { myChart.destroy(); }
 
         const labels = filteredData.map(test => `${test.name} (${test.date})`);
         const percentages = filteredData.map(test => (test.obtained / test.total) * 100);
-        
-        const backgroundColors = filteredData.map(test => 
-            test.obtained >= test.passing ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)'
-        );
-        
-        const borderColors = filteredData.map(test => 
-            test.obtained >= test.passing ? 'rgb(39, 174, 96)' : 'rgb(192, 57, 43)'
-        );
+        const backgroundColors = filteredData.map(test => test.obtained >= test.passing ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)');
+        const borderColors = filteredData.map(test => test.obtained >= test.passing ? 'rgb(39, 174, 96)' : 'rgb(192, 57, 43)');
 
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Percentage (%)',
+                    label: 'Score Percentage (%)',
                     data: percentages,
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
@@ -77,37 +93,44 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, max: 100 }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            afterLabel: function(context) {
-                                const item = filteredData[context.dataIndex];
-                                return [
-                                    `Score: ${item.obtained}/${item.total}`,
-                                    `Result: ${item.obtained >= item.passing ? "PASS" : "FAIL"}`
-                                ];
-                            }
-                        }
-                    }
-                }
+                scales: { y: { beginAtZero: true, max: 100 } }
             }
         });
     }
 
-    // Filter Logic
-    function updateChart() {
+    function renderList(filteredData) {
+        const listContainer = document.getElementById('resultsList');
+        listContainer.innerHTML = ''; // Clear existing
+
+        filteredData.forEach(test => {
+            const isPassed = test.obtained >= test.passing;
+            const percentage = ((test.obtained / test.total) * 100).toFixed(1);
+            
+            const listItem = document.createElement('li');
+            listItem.className = 'list-item';
+            listItem.innerHTML = `
+                <div class="test-info">
+                    <p class="test-name">${test.name}</p>
+                    <span class="test-meta">${test.date} | Passing: ${test.passing}</span>
+                </div>
+                <span class="badge ${isPassed ? 'pass' : 'fail'}">${isPassed ? 'Pass' : 'Fail'}</span>
+                <span class="score-text">${test.obtained}/${test.total} (${percentage}%)</span>
+            `;
+            listContainer.appendChild(listItem);
+        });
+    }
+
+    function updateView() {
         const searchTerm = document.getElementById('searchBar').value.toLowerCase();
         const filtered = allTestData.filter(test => 
             test.name.toLowerCase().includes(searchTerm)
         );
         renderChart(filtered);
+        renderList(filtered);
     }
 
-    // Initial render
-    renderChart(allTestData);
+    // Initial load
+    updateView();
 </script>
 
 </body>
