@@ -1,347 +1,114 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Test Results – Percentage Chart</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0f172a;         /* slate-900 */
-      --panel:#111827;      /* gray-900 */
-      --text:#e5e7eb;       /* gray-200 */
-      --muted:#9ca3af;      /* gray-400 */
-      --accent:#60a5fa;     /* blue-400 */
-      --pass:#22c55e;       /* green-500 */
-      --fail:#ef4444;       /* red-500 */
-      --grid:#374151;       /* gray-700 */
-    }
-    body{
-      margin:0;
-      font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans";
-      background:var(--bg);
-      color:var(--text);
-      line-height:1.6;
-    }
-    header{
-      padding:24px;
-      border-bottom:1px solid #1f2937;
-      background:linear-gradient(180deg, rgba(96,165,250,0.12), transparent);
-    }
-    header h1{ margin:0 0 8px; font-size:1.5rem; }
-    header p{ margin:0; color:var(--muted); font-size:0.95rem; }
-    .container{ max-width:1100px; padding:24px; margin:0 auto; }
-    .controls{
-      display:flex; flex-wrap:wrap; gap:12px; align-items:center;
-      margin-bottom:16px; background:var(--panel); padding:16px; border-radius:12px;
-    }
-    .controls label{ font-weight:600; margin-right:6px; }
-    select, button{
-      background:#0b1220; color:var(--text); border:1px solid #273148;
-      padding:8px 10px; border-radius:8px; font-size:0.95rem;
-    }
-    button{ cursor:pointer; background:var(--accent); border-color:transparent; color:#0b1220; font-weight:600; }
-    .legend{ display:flex; flex-wrap:wrap; gap:12px; margin:8px 0 16px; color:var(--muted); font-size:0.9rem; }
-    .legend .item{ display:flex; align-items:center; gap:8px; }
-    .dot{ width:14px; height:14px; border-radius:50%; display:inline-block; }
-    .panel{ background:var(--panel); border-radius:12px; padding:16px; margin-bottom:18px; }
-    canvas{
-      width:100%; height:280px; display:block; background:#0b1220;
-      border:1px solid #273148; border-radius:12px;
-    }
-    table{ width:100%; border-collapse:collapse; font-size:0.95rem; }
-    th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid #1f2937; }
-    th{ color:var(--muted); font-weight:700; }
-    tr:hover td{ background:#0b1220; }
-    .badge{ padding:2px 8px; border-radius:999px; font-size:0.85rem; font-weight:700; }
-    .badge.pass{ background:color-mix(in oklab, var(--pass) 20%, black); color:#d1fae5; border:1px solid var(--pass); }
-    .badge.fail{ background:color-mix(in oklab, var(--fail) 20%, black); color:#fee2e2; border:1px solid var(--fail); }
-    .empty{ padding:16px; color:var(--muted); text-align:center; border:1px dashed #374151; border-radius:12px; background:#0b1220; }
-    @media (max-width:640px){
-      header h1{ font-size:1.25rem; }
-      canvas{ height:240px; }
-      .controls{ flex-direction:column; align-items:stretch; }
-      select, button{ width:100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 40px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 2.5rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #1a1a1a; margin-bottom: 30px; }
+        
+        .controls { display: flex; justify-content: center; margin-bottom: 30px; }
+        #searchBar { 
+            width: 100%; max-width: 400px; padding: 12px 20px; 
+            border: 2px solid #ddd; border-radius: 25px; outline: none;
+            transition: border-color 0.3s; font-size: 16px;
+        }
+        #searchBar:focus { border-color: #3498db; }
+
+        .chart-container { position: relative; height: 450px; width: 100%; }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>Test Results – Percentage Chart</h1>
-    <p>Bars show percentage scored. Green = Pass, Red = Fail. Use the dropdown to shortlist by test name.</p>
-  </header>
 
-  <div class="container">
+<div class="container">
+    <h2>Academic Performance Dashboard</h2>
+    
     <div class="controls">
-      <div>
-        <label for="testNameSelect">Shortlist by Test Name:</label>
-        <select id="testNameSelect"></select>
-      </div>
-      <button id="resetBtn" title="Show all tests">Reset</button>
+        <input type="text" id="searchBar" placeholder="Search by test name (e.g. Physics)..." onkeyup="updateChart()">
     </div>
 
-    <div class="legend">
-      <div class="item"><span class="dot" style="background:var(--pass)"></span>Pass (percentage bar)</div>
-      <div class="item"><span class="dot" style="background:var(--fail)"></span>Fail (percentage bar)</div>
+    <div class="chart-container">
+        <canvas id="resultsChart"></canvas>
     </div>
+</div>
 
-    <div class="panel">
-      <h2 style="margin:0 0 10px; font-size:1.1rem; color:var(--muted)">Percentage Scored per Test</h2>
-      <canvas id="chart" width="1000" height="320" aria-label="Bar chart of percentage marks"></canvas>
-    </div>
-
-    <div class="panel">
-      <h2 style="margin:0 0 10px; font-size:1.1rem; color:var(--muted)">Detailed Results</h2>
-      <div id="tableContainer"></div>
-    </div>
-  </div>
-
-  <script>
-    // ======== Sample Data (edit as needed) ========
-    const TESTS = [       
-    { name:"Geography Practice",    date:"2025-01-05", total:90, passing:60, obtained:71 },       
-    { name:"CSAT Test series", date:"2025-01-09", total:200, passing:67, obtained:59 }     
+<script>
+    // --- YOUR DATA SOURCE ---
+    const allTestData = [
+        { name: "Geography Practice", date: "2025-01-05", passing: 60, total: 90, obtained: 71 },
+        { name: "CSAT", date: "2025-01-09", passing: 67, total: 200, obtained: 59 }
     ];
 
-    // ======== Helpers ========
-    function computeStatus(test){
-      const pass = test.obtained >= test.passing;
-      return { pass, label: pass ? "Pass" : "Fail" };
-    }
-    function percentage(test){
-      return (test.obtained / test.total) * 100;
-    }
-    function formatDateISO(iso){
-      const d = new Date(iso + "T00:00:00");
-      const day = String(d.getDate()).padStart(2,'0');
-      const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      const mon = monthNames[d.getMonth()];
-      const year = d.getFullYear();
-      return `${day}-${mon}-${year}`;
-    }
-    function uniqueTestNames(data){
-      return Array.from(new Set(data.map(t => t.name))).sort((a,b) => a.localeCompare(b));
-    }
-    function truncate(s, max){ return s.length > max ? s.slice(0, max-1) + '…' : s; }
-    function getCSS(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+    let myChart;
 
-    // ======== Filter Control ========
-    const select = document.getElementById('testNameSelect');
-    function populateFilterOptions(data){
-      const names = uniqueTestNames(data);
-      select.innerHTML = '';
-      const optAll = document.createElement('option');
-      optAll.value = '__ALL__';
-      optAll.textContent = 'All tests';
-      select.appendChild(optAll);
-      for(const n of names){
-        const opt = document.createElement('option');
-        opt.value = n;
-        opt.textContent = n;
-        select.appendChild(opt);
-      }
-      select.value = '__ALL__';
-    }
+    function renderChart(filteredData) {
+        const ctx = document.getElementById('resultsChart').getContext('2d');
+        
+        // Destroy old chart instance if it exists to prevent overlap
+        if (myChart) { myChart.destroy(); }
 
-    // ======== Table Rendering ========
-    const tableContainer = document.getElementById('tableContainer');
-    function renderTable(data){
-      if(data.length === 0){
-        tableContainer.innerHTML = `<div class="empty">No tests match the selected filter.</div>`;
-        return;
-      }
-      const rows = data.map(t => {
-        const { pass, label } = computeStatus(t);
-        const pct = percentage(t);
-        return `
-          <tr>
-            <td>${t.name}</td>
-            <td>${formatDateISO(t.date)}</td>
-            <td>${t.total}</td>
-            <td>${t.passing}</td>
-            <td>${t.obtained}</td>
-            <td><span class="badge ${pass ? 'pass':'fail'}">${label}</span></td>
-            <td>${pct.toFixed(1)}%</td>
-          </tr>
-        `;
-      }).join('');
-      tableContainer.innerHTML = `
-        <div style="overflow:auto">
-          <table role="table" aria-label="Test results table">
-            <thead>
-              <tr>
-                <th>Test Name</th>
-                <th>Date</th>
-                <th>Total</th>
-                <th>Passing</th>
-                <th>Obtained</th>
-                <th>Status</th>
-                <th>Percent</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      `;
+        const labels = filteredData.map(test => `${test.name} (${test.date})`);
+        const percentages = filteredData.map(test => (test.obtained / test.total) * 100);
+        
+        const backgroundColors = filteredData.map(test => 
+            test.obtained >= test.passing ? 'rgba(46, 204, 113, 0.8)' : 'rgba(231, 76, 60, 0.8)'
+        );
+        
+        const borderColors = filteredData.map(test => 
+            test.obtained >= test.passing ? 'rgb(39, 174, 96)' : 'rgb(192, 57, 43)'
+        );
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Percentage (%)',
+                    data: percentages,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const item = filteredData[context.dataIndex];
+                                return [
+                                    `Score: ${item.obtained}/${item.total}`,
+                                    `Result: ${item.obtained >= item.passing ? "PASS" : "FAIL"}`
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
-    // ======== Canvas Chart (Percent) ========
-    const canvas = document.getElementById('chart');
-    const ctx = canvas.getContext('2d');
-
-    function clearCanvas(){ ctx.clearRect(0, 0, canvas.width, canvas.height); }
-
-    function drawChart(data){
-      clearCanvas();
-      if(data.length === 0){
-        ctx.fillStyle = '#9ca3af';
-        ctx.font = '16px system-ui';
-        ctx.fillText('No data to display', 20, 40);
-        return;
-      }
-
-      // Layout
-      const margin = { top: 30, right: 30, bottom: 80, left: 60 };
-      const chartW = canvas.width - margin.left - margin.right;
-      const chartH = canvas.height - margin.top - margin.bottom;
-      const x0 = margin.left;
-      const y0 = canvas.height - margin.bottom;
-
-      // Y axis fixed 0..100
-      const yMin = 0, yMax = 100, yTicks = 5;
-      const yStep = (yMax - yMin) / yTicks;
-
-      // Panel background
-      roundRect(ctx, x0, margin.top, chartW, chartH, 10, '#0b1220', '#273148');
-
-      // Axes
-      ctx.strokeStyle = '#273148';
-      ctx.lineWidth = 1;
-      // Y
-      ctx.beginPath(); ctx.moveTo(x0, margin.top); ctx.lineTo(x0, y0); ctx.stroke();
-      // X
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + chartW, y0); ctx.stroke();
-
-      // Grid + Y labels
-      ctx.font = '12px system-ui';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      for(let i=0;i<=yTicks;i++){
-        const yVal = yMin + i * yStep;
-        const y = y0 - (yVal - yMin) / (yMax - yMin) * chartH;
-        ctx.strokeStyle = '#374151'; ctx.globalAlpha = 0.35;
-        ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + chartW, y); ctx.stroke();
-        ctx.globalAlpha = 1.0;
-        ctx.fillStyle = '#9ca3af';
-        ctx.fillText(Math.round(yVal) + '%', x0 - 8, y);
-      }
-
-      // Bars
-      const n = data.length;
-      const gap = 16;
-      const barWidth = Math.max(18, (chartW - gap * (n + 1)) / n);
-      let x = x0 + gap;
-
-      for(const d of data){
-        const pct = Math.max(0, Math.min(100, percentage(d)));
-        const h = (pct - yMin) / (yMax - yMin) * chartH;
-        const y = y0 - h;
-        const { pass } = computeStatus(d);
-
-        // Track area to 100% (subtle)
-        ctx.fillStyle = '#0c1627';
-        ctx.fillRect(x, y0 - chartH, barWidth, chartH);
-
-        // Percentage bar ("candle")
-        ctx.fillStyle = pass ? getCSS('--pass') : getCSS('--fail');
-        fillRoundedBar(ctx, x, y, barWidth, h, 6);
-
-        // Value label
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '12px system-ui';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(pct.toFixed(1) + '%', x + barWidth/2, y - 4);
-
-        // X labels (name + date)
-        ctx.save();
-        ctx.translate(x + barWidth/2, y0 + 8);
-        ctx.rotate(-Math.PI/6);
-        ctx.fillStyle = '#9ca3af';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.font = '12px system-ui';
-        ctx.fillText(truncate(d.name, 22), 0, 0);
-        ctx.fillText(formatDateISO(d.date), 0, 14);
-        ctx.restore();
-
-        x += barWidth + gap;
-      }
-
-      // Caption
-      ctx.fillStyle = '#9ca3af';
-      ctx.font = '14px system-ui';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('Bars show percentage scored (0–100%). Green = Pass, Red = Fail.', x0 + 6, margin.top + 6);
+    // Filter Logic
+    function updateChart() {
+        const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+        const filtered = allTestData.filter(test => 
+            test.name.toLowerCase().includes(searchTerm)
+        );
+        renderChart(filtered);
     }
 
-    // ======== Canvas Helpers ========
-    function roundRect(ctx, x, y, w, h, r, fill, stroke){
-      ctx.beginPath();
-      ctx.moveTo(x+r, y);
-      ctx.arcTo(x+w, y, x+w, y+h, r);
-      ctx.arcTo(x+w, y+h, x, y+h, r);
-      ctx.arcTo(x, y+h, x, y, r);
-      ctx.arcTo(x, y, x+w, y, r);
-      if(fill){ ctx.fillStyle = fill; ctx.fill(); }
-      if(stroke){ ctx.strokeStyle = stroke; ctx.stroke(); }
-    }
-    function fillRoundedBar(ctx, x, y, w, h, r){
-      const y2 = y + h;
-      ctx.beginPath();
-      ctx.moveTo(x, y2);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.lineTo(x + w - r, y);
-      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-      ctx.lineTo(x + w, y2);
-      ctx.closePath();
-      ctx.fill();
-    }
+    // Initial render
+    renderChart(allTestData);
+</script>
 
-    // ======== Data Flow ========
-    function byDateAsc(a, b){ return (new Date(a.date)) - (new Date(b.date)); }
-
-    function applyFilter(){
-      const val = select.value;
-      const filtered = (val === '__ALL__')
-        ? [...TESTS].sort(byDateAsc)
-        : TESTS.filter(t => t.name === val).sort(byDateAsc);
-
-      drawChart(filtered);
-      renderTable(filtered);
-    }
-
-    // ======== Init ========
-    populateFilterOptions(TESTS);
-    select.addEventListener('change', applyFilter);
-    document.getElementById('resetBtn').addEventListener('click', () => { select.value = '__ALL__'; applyFilter(); });
-
-    // Handle device pixel ratio for crisp canvas
-    const canvasEl = canvas;
-    const ctx2 = ctx;
-    function resizeForDPR(){
-      const dpr = window.devicePixelRatio || 1;
-      const cssW = canvasEl.clientWidth;
-      const cssH = canvasEl.clientHeight;
-      canvasEl.width = Math.round(cssW * dpr);
-      canvasEl.height = Math.round(cssH * dpr);
-      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
-      applyFilter();
-    }
-    resizeForDPR();
-    window.addEventListener('resize', resizeForDPR);
-  </script>
 </body>
 </html>
