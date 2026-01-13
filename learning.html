@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base & Status</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 { font-size: 2.25rem; color: #0f172a; margin-bottom: 10px; }
+
+        /* FAQ Section Styles */
+        .section-title {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        details {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+
+        details[open] {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        summary {
+            padding: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        summary::-webkit-details-marker { display: none; }
+
+        summary::after {
+            content: '＋';
+            color: var(--primary-color);
+        }
+
+        details[open] summary::after {
+            content: '－';
+        }
+
+        .answer {
+            padding: 0 16px 16px 16px;
+            color: #475569;
+        }
+
+        /* Tips Section Styles */
+        .tips-container {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 20px;
+        }
+
+        .tips-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .tips-list li {
+            margin-bottom: 10px;
+        }
+
+        .tips-list li strong {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Knowledge Hub</h1>
+        <p>Frequently Asked Questions & Project Best Practices</p>
+    </header>
+
+    <h2 class="section-title">❓ Frequently Asked Questions</h2>
+    
+    <details>
+        <summary>How do I update the status of this document?</summary>
+        <div class="answer">
+            You can simply open this HTML file in a text editor (like Notepad or VS Code) and add more <code>&lt;details&gt;</code> blocks in the FAQ section.
+        </div>
+    </details>
+
+    <details>
+        <summary>What is the purpose of this file?</summary>
+        <div class="answer">
+            This serves as a lightweight, single-file documentation hub that requires no server or database to run.
+        </div>
+    </details>
+
+    <details>
+        <summary>Can I customize the colors?</summary>
+        <div class="answer">
+            Yes! Go to the <code>&lt;style&gt;</code> section at the top and change the values in the <code>:root</code> block.
+        </div>
+    </details>
+
+    <h2 class="section-title">💡 Tips & Best Practices</h2>
+    
+    <div class="tips-container">
+        <ul class="tips-list">
+            <li><strong>Be Concise:</strong> Keep your answers short and to the point to help users find information faster.</li>
+            <li><strong>Use Formatting:</strong> Use bold text or code tags to highlight important terms.</li>
+            <li><strong>Regular Updates:</strong> Review this file once a month to ensure all procedures are still current.</li>
+            <li><strong>Mobile Friendly:</strong> This layout is responsive, so you can view it on your phone or tablet easily.</li>
+        </ul>
+    </div>
+
+</div>
+
+</body>
+</html>
