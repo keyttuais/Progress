@@ -1,0 +1,494 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Results Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f172a;         /* slate-900 */
+      --panel:#111827;      /* gray-900 */
+      --text:#e5e7eb;       /* gray-200 */
+      --muted:#9ca3af;      /* gray-400 */
+      --accent:#60a5fa;     /* blue-400 */
+      --pass:#22c55e;       /* green-500 */
+      --fail:#ef4444;       /* red-500 */
+      --line:#f59e0b;       /* amber-500 (passing mark line) */
+      --grid:#374151;       /* gray-700 */
+    }
+    body{
+      margin:0;
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.6;
+    }
+    header{
+      padding:24px;
+      border-bottom:1px solid #1f2937;
+      background:linear-gradient(180deg, rgba(96,165,250,0.12), transparent);
+    }
+    header h1{
+      margin:0 0 8px;
+      font-size:1.5rem;
+    }
+    header p{
+      margin:0;
+      color:var(--muted);
+      font-size:0.95rem;
+    }
+    .container{
+      max-width:1100px;
+      padding:24px;
+      margin:0 auto;
+    }
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      margin-bottom:16px;
+      background:var(--panel);
+      padding:16px;
+      border-radius:12px;
+    }
+    .controls label{
+      font-weight:600;
+      margin-right:6px;
+    }
+    select, button{
+      background:#0b1220;
+      color:var(--text);
+      border:1px solid #273148;
+      padding:8px 10px;
+      border-radius:8px;
+      font-size:0.95rem;
+    }
+    button{
+      cursor:pointer;
+      background:var(--accent);
+      border-color:transparent;
+      color:#0b1220;
+      font-weight:600;
+    }
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin:8px 0 16px;
+      color:var(--muted);
+      font-size:0.9rem;
+    }
+    .legend .item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .dot{
+      width:14px; height:14px; border-radius:50%;
+      display:inline-block;
+    }
+    .panel{
+      background:var(--panel);
+      border-radius:12px;
+      padding:16px;
+      margin-bottom:18px;
+    }
+    canvas{
+      width:100%;
+      height:280px;
+      display:block;
+      background:#0b1220;
+      border:1px solid #273148;
+      border-radius:12px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:0.95rem;
+    }
+    th, td{
+      text-align:left;
+      padding:10px 12px;
+      border-bottom:1px solid #1f2937;
+    }
+    th{
+      color:var(--muted);
+      font-weight:700;
+    }
+    tr:hover td{
+      background:#0b1220;
+    }
+    .status{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-weight:700;
+    }
+    .badge{
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:0.85rem;
+      font-weight:700;
+    }
+    .badge.pass{ background:color-mix(in oklab, var(--pass) 20%, black); color:#d1fae5; border:1px solid var(--pass); }
+    .badge.fail{ background:color-mix(in oklab, var(--fail) 20%, black); color:#fee2e2; border:1px solid var(--fail); }
+    .empty{
+      padding:16px;
+      color:var(--muted);
+      text-align:center;
+      border:1px dashed #374151;
+      border-radius:12px;
+      background:#0b1220;
+    }
+    @media (max-width:640px){
+      header h1{ font-size:1.25rem; }
+      canvas{ height:240px; }
+      .controls{ flex-direction:column; align-items:stretch; }
+      select, button{ width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Test Results Dashboard</h1>
+    <p>Filter by test name, view pass/fail status, and see obtained marks vs passing marks on the chart.</p>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <div>
+        <label for="testNameSelect">Shortlist by Test Name:</label>
+        <select id="testNameSelect"></select>
+      </div>
+      <button id="resetBtn" title="Show all tests">Reset</button>
+    </div>
+
+    <div class="legend">
+      <div class="item"><span class="dot" style="background:var(--pass)"></span>Obtained (Pass)</div>
+      <div class="item"><span class="dot" style="background:var(--fail)"></span>Obtained (Fail)</div>
+      <div class="item"><span class="dot" style="background:var(--line)"></span>Passing mark line</div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin:0 0 10px; font-size:1.1rem; color:var(--muted)">Obtained Marks per Test</h2>
+      <canvas id="chart" width="1000" height="320" aria-label="Bar chart of test marks"></canvas>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin:0 0 10px; font-size:1.1rem; color:var(--muted)">Detailed Results</h2>
+      <div id="tableContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // ======== Sample Data (edit freely) ========
+    const TESTS = [
+      { name:"Math Unit Test 1",    date:"2025-07-15", total:50, passing:20, obtained:34 },
+      { name:"Science Unit Test 1", date:"2025-07-22", total:50, passing:20, obtained:18 },
+      { name:"English Unit Test 1", date:"2025-07-29", total:50, passing:20, obtained:42 },
+      { name:"Math Unit Test 2",    date:"2025-08-12", total:60, passing:24, obtained:51 },
+      { name:"Science Unit Test 2", date:"2025-08-19", total:60, passing:24, obtained:25 },
+      { name:"English Unit Test 2", date:"2025-08-26", total:60, passing:24, obtained:35 },
+      { name:"Computer Lab Test",   date:"2025-09-04", total:40, passing:16, obtained:36 },
+      { name:"History Quiz",        date:"2025-09-11", total:30, passing:12, obtained:11 }
+    ];
+
+    // ======== Utilities ========
+    function computeStatus(test){
+      const pass = test.obtained >= test.passing;
+      return { pass, label: pass ? "Pass" : "Fail" };
+    }
+    function formatDateISO(iso){
+      // Returns DD-MMM-YYYY
+      const d = new Date(iso + "T00:00:00");
+      const day = String(d.getDate()).padStart(2,'0');
+      const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const mon = monthNames[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${mon}-${year}`;
+    }
+    function uniqueTestNames(data){
+      return Array.from(new Set(data.map(t => t.name))).sort((a,b) => a.localeCompare(b));
+    }
+
+    // ======== Populate Filter ========
+    const select = document.getElementById('testNameSelect');
+    function populateFilterOptions(data){
+      const names = uniqueTestNames(data);
+      select.innerHTML = '';
+      const optAll = document.createElement('option');
+      optAll.value = '__ALL__';
+      optAll.textContent = 'All tests';
+      select.appendChild(optAll);
+      for(const n of names){
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        select.appendChild(opt);
+      }
+      select.value = '__ALL__';
+    }
+
+    // ======== Table Rendering ========
+    const tableContainer = document.getElementById('tableContainer');
+    function renderTable(data){
+      if(data.length === 0){
+        tableContainer.innerHTML = `<div class="empty">No tests match the selected filter.</div>`;
+        return;
+      }
+      const rows = data.map(t => {
+        const { pass, label } = computeStatus(t);
+        const pct = (t.obtained / t.total) * 100;
+        return `
+          <tr>
+            <td>${t.name}</td>
+            <td>${formatDateISO(t.date)}</td>
+            <td>${t.total}</td>
+            <td>${t.passing}</td>
+            <td>${t.obtained}</td>
+            <td><span class="badge ${pass ? 'pass':'fail'}">${label}</span></td>
+            <td>${pct.toFixed(1)}%</td>
+          </tr>
+        `;
+      }).join('');
+      tableContainer.innerHTML = `
+        <div style="overflow:auto">
+          <table role="table" aria-label="Test results table">
+            <thead>
+              <tr>
+                <th>Test Name</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Passing</th>
+                <th>Obtained</th>
+                <th>Status</th>
+                <th>Percent</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // ======== Chart Rendering (Canvas, no external libs) ========
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+
+    function clearCanvas(){
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawChart(data){
+      clearCanvas();
+      if(data.length === 0){
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '16px system-ui';
+        ctx.fillText('No data to display', 20, 40);
+        return;
+      }
+
+      // Layout
+      const margin = { top: 30, right: 30, bottom: 80, left: 60 };
+      const chartW = canvas.width - margin.left - margin.right;
+      const chartH = canvas.height - margin.top - margin.bottom;
+
+      // Scale
+      const maxTotal = Math.max(...data.map(d => d.total));
+      const yMax = niceMax(maxTotal);
+      const yTicks = 5;
+      const yStep = yMax / yTicks;
+
+      const x0 = margin.left;
+      const y0 = canvas.height - margin.bottom;
+
+      // Background
+      roundRect(ctx, x0, margin.top, chartW, chartH, 10, '#0b1220', '#273148');
+
+      // Axes
+      ctx.strokeStyle = '#273148';
+      ctx.lineWidth = 1;
+      // Y axis line
+      ctx.beginPath();
+      ctx.moveTo(x0, margin.top);
+      ctx.lineTo(x0, y0);
+      ctx.stroke();
+      // X axis line
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + chartW, y0);
+      ctx.stroke();
+
+      // Grid + Y labels
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for(let i=0; i<=yTicks; i++){
+        const yVal = i * yStep;
+        const y = y0 - (yVal / yMax) * chartH;
+        ctx.strokeStyle = '#374151';
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x0 + chartW, y);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText(Math.round(yVal), x0 - 8, y);
+      }
+
+      // Bars
+      const n = data.length;
+      const gap = 16;
+      const barWidth = Math.max(18, (chartW - gap * (n + 1)) / n);
+      let x = x0 + gap;
+
+      // Draw bars and per-test passing mark line
+      for(const d of data){
+        const barH = (d.obtained / yMax) * chartH;
+        const y = y0 - barH;
+        const pass = d.obtained >= d.passing;
+
+        // Bar background track to total (optional visual cue)
+        const totalH = (d.total / yMax) * chartH;
+        ctx.fillStyle = '#0c1627';
+        ctx.fillRect(x, y0 - totalH, barWidth, totalH);
+
+        // Obtained bar
+        ctx.fillStyle = pass ? getCSS('--pass') : getCSS('--fail');
+        // Draw rounded bar
+        fillRoundedBar(ctx, x, y, barWidth, barH, 6);
+
+        // Passing mark line within the bar area
+        const passY = y0 - (d.passing / yMax) * chartH;
+        ctx.strokeStyle = getCSS('--line');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 2, passY);
+        ctx.lineTo(x + barWidth + 2, passY);
+        ctx.stroke();
+
+        // Value label (obtained)
+        ctx.fillStyle = '#e5e7eb';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(d.obtained, x + barWidth/2, y - 4);
+
+        // X-axis labels (test name, date)
+        ctx.save();
+        ctx.translate(x + barWidth/2, y0 + 8);
+        ctx.rotate(-Math.PI/6); // -30 degrees
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.font = '12px system-ui';
+        const label1 = truncate(d.name, 22);
+        const label2 = formatDateISO(d.date);
+        ctx.fillText(label1, 0, 0);
+        ctx.fillText(label2, 0, 14);
+        ctx.restore();
+
+        x += barWidth + gap;
+      }
+
+      // Title (optional)
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '14px system-ui';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('Obtained marks (bar) vs Passing mark (line). Y-axis scaled to max total.', x0 + 6, margin.top + 6);
+
+      // Helpers
+      function niceMax(m){
+        // Round up to a nicer number (nearest 10)
+        const p = Math.pow(10, Math.floor(Math.log10(m)));
+        const step = p / 2;
+        let out = Math.ceil(m / step) * step;
+        if(out < m) out += step;
+        return Math.max(out, m);
+      }
+    }
+
+    // ======== Small Canvas Helpers ========
+    function roundRect(ctx, x, y, w, h, r, fill, stroke){
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y, x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x, y+h, r);
+      ctx.arcTo(x, y+h, x, y, r);
+      ctx.arcTo(x, y, x+w, y, r);
+      if(fill){
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if(stroke){
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+    }
+    function fillRoundedBar(ctx, x, y, w, h, r){
+      const y2 = y + h;
+      ctx.beginPath();
+      ctx.moveTo(x, y2);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    function getCSS(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+    function truncate(s, max){
+      return s.length > max ? s.slice(0, max-1) + '…' : s;
+    }
+
+    // ======== Data Pipeline (filter + render) ========
+    function byDateAsc(a, b){
+      return (new Date(a.date)) - (new Date(b.date));
+    }
+
+    function applyFilter(){
+      const val = select.value;
+      const filtered = (val === '__ALL__')
+        ? [...TESTS].sort(byDateAsc)
+        : TESTS.filter(t => t.name === val).sort(byDateAsc);
+
+      drawChart(filtered);
+      renderTable(filtered);
+    }
+
+    // ======== Init ========
+    populateFilterOptions(TESTS);
+    applyFilter();
+
+    select.addEventListener('change', applyFilter);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      select.value = '__ALL__';
+      applyFilter();
+    });
+
+    // Resize handling (redraw for crispness on DPR changes)
+    function resizeForDPR(){
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth;
+      const cssHeight = canvas.clientHeight;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale drawing to DPR
+      applyFilter();
+    }
+    // Initial DPR adjust
+    resizeForDPR();
+    window.addEventListener('resize', resizeForDPR);
+  </script>
+</body>
+</html>
